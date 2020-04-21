@@ -17,7 +17,7 @@ import com.marketwinks.livemacdcalculator.repository.UK_LSE_5Mins_LiveMarketPric
 @EnableAutoConfiguration
 @EnableWebMvc
 @ComponentScan(basePackages = { "com.*" })
-@EnableMongoRepositories(basePackages = "com.marketwinks.livepricefeeder.repository")
+@EnableMongoRepositories(basePackages = "com.marketwinks.livemacdcalculator.repository")
 @EnableCaching
 public class LivemacdcalculatorApplication {
 
