@@ -38,13 +38,15 @@ public class UK_LSE_5Mins_LiveMarketMacdService {
 	@org.springframework.scheduling.annotation.Async
 	@RequestMapping(value = "/{symbol}/calc", method = RequestMethod.GET)
 	public boolean UK_LSE_5Mins_LiveMarketMacdParser(@PathVariable String symbol) {
-System.gc();
+		System.gc();
 		boolean execution_result = false;
 		int calcStartindex = 0;
 		int MarketFeedsSizeForSymbol = 0;
 
 		List<uk_lse_5mins_livemarketmacd> MarketFeeds_full = UK_LSE_5Mins_LiveMarketMacdRepository.findAll();
 
+		MongoClient mongoClient = MongoClients.create(
+				"mongodb+srv://marketwinks:L9sS6oOAk1sHL0yi@aws-eu-west1-cluster-tszuq.mongodb.net/marketwinksdbprod?retryWrites=true");
 		try {
 
 			System.out.println("MACD Calculation started for:" + symbol);
@@ -213,13 +215,10 @@ System.gc();
 			// {
 			//
 
-			MongoClient mongoClient = MongoClients.create(
-					"mongodb+srv://marketwinks:L9sS6oOAk1sHL0yi@aws-eu-west1-cluster-tszuq.mongodb.net/marketwinksdbprod?retryWrites=true");
 			MongoDatabase TestDB = mongoClient.getDatabase("marketwinksdbprod");
 			MongoCollection<org.bson.Document> uk_lse_5mins_livemarketmacdjsonCollection = TestDB
 					.getCollection("uk_lse_5mins_livemarketmacdjson");
 
-			
 			// find one document with new Document
 			org.bson.Document doc = uk_lse_5mins_livemarketmacdjsonCollection
 					.find(new org.bson.Document("macdjsonref", "uk_lse_5mins_macdjson_" + symbol)).first();
@@ -240,26 +239,32 @@ System.gc();
 			// } else {
 			// System.out.println("There is no macdjson entry previously for:" + symbol);
 			// }
-			
+
 			// }
 
 			uk_lse_5mins_livemarketmacdjson jsonsaveresult = UK_LSE_5Mins_LiveMarketMacdjsonRepository
 					.save(uk_lse_5mins_macdjson);
 			// uk_lse_5mins_macdjson_<symbol> --> macdDataforSaving
-			 mongoClient.close();
-			 
-			 MarketFeeds_full.clear();
-			 MarketFeeds_full = null;
-			 MarketFeeds.clear();
-			 MarketFeeds = null;
-			 MarketFeedsForMacdJson.clear();
-			 MarketFeedsForMacdJson = null;
-			 System.gc();
+		//	mongoClient.close();
+
+			MarketFeeds_full.clear();
+			MarketFeeds_full = null;
+			MarketFeeds.clear();
+			MarketFeeds = null;
+			MarketFeedsForMacdJson.clear();
+			MarketFeedsForMacdJson = null;
+			System.gc();
 
 			execution_result = true;
 		} catch (Exception e) {
 
 			System.out.println(e);
+		} finally {
+
+			mongoClient.close();
+
+			System.gc();
+
 		}
 
 		return execution_result;

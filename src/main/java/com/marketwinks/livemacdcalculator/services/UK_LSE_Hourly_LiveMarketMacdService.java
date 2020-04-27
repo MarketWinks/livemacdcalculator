@@ -45,6 +45,9 @@ public class UK_LSE_Hourly_LiveMarketMacdService {
 
 		List<uk_lse_hourly_livemarketmacd> MarketFeeds_full = UK_LSE_Hourly_LiveMarketMacdRepository.findAll();
 
+		MongoClient mongoClient = MongoClients.create(
+				"mongodb+srv://marketwinks:L9sS6oOAk1sHL0yi@aws-eu-west1-cluster-tszuq.mongodb.net/marketwinksdbprod?retryWrites=true");
+
 		try {
 
 			System.out.println("MACD Calculation started for:" + symbol);
@@ -213,8 +216,6 @@ public class UK_LSE_Hourly_LiveMarketMacdService {
 			// {
 			//
 
-			MongoClient mongoClient = MongoClients.create(
-					"mongodb+srv://marketwinks:L9sS6oOAk1sHL0yi@aws-eu-west1-cluster-tszuq.mongodb.net/marketwinksdbprod?retryWrites=true");
 			MongoDatabase TestDB = mongoClient.getDatabase("marketwinksdbprod");
 			MongoCollection<org.bson.Document> uk_lse_hourly_livemarketmacdjsonCollection = TestDB
 					.getCollection("uk_lse_hourly_livemarketmacdjson");
@@ -245,7 +246,7 @@ public class UK_LSE_Hourly_LiveMarketMacdService {
 			uk_lse_hourly_livemarketmacdjson jsonsaveresult = UK_LSE_Hourly_LiveMarketMacdjsonRepository
 					.save(uk_lse_hourly_macdjson);
 			// uk_lse_hourly_macdjson_<symbol> --> macdDataforSaving
-			mongoClient.close();
+			//mongoClient.close();
 
 			MarketFeeds_full.clear();
 			MarketFeeds_full = null;
@@ -259,7 +260,12 @@ public class UK_LSE_Hourly_LiveMarketMacdService {
 		} catch (Exception e) {
 
 			System.out.println(e);
+		}finally {
+			mongoClient.close();
+			System.gc();
+
 		}
+
 
 		return execution_result;
 
