@@ -10,6 +10,9 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -34,55 +37,30 @@ public class UK_LSE_5Mins_LiveMarketMacdService {
 	@Autowired
 	private UK_LSE_5Mins_LiveMarketMacdjsonRepository UK_LSE_5Mins_LiveMarketMacdjsonRepository;
 
-	// https://stackoverflow.com/questions/16332092/spring-mvc-pathvariable-with-dot-is-getting-truncated
 	@org.springframework.scheduling.annotation.Async
 	@RequestMapping(value = "/{symbol}/calc", method = RequestMethod.GET)
 	public boolean UK_LSE_5Mins_LiveMarketMacdParser(@PathVariable String symbol) {
 		System.gc();
 		boolean execution_result = false;
 		int calcStartindex = 0;
-		int MarketFeedsSizeForSymbol = 0;
-
-		List<uk_lse_5mins_livemarketmacd> MarketFeeds_full = UK_LSE_5Mins_LiveMarketMacdRepository.findAll();
 
 		MongoClient mongoClient = MongoClients.create(
 				"mongodb+srv://marketwinks:L9sS6oOAk1sHL0yi@aws-eu-west1-cluster-tszuq.mongodb.net/marketwinksdbprod?retryWrites=true");
+
+		MongoTemplate mongoTemplate = new MongoTemplate(mongoClient, "marketwinksdbprod");
+		Query query = new Query();
+		query.addCriteria(Criteria.where("symbol").is(symbol));
+		List<uk_lse_5mins_livemarketmacd> MarketFeeds = mongoTemplate.find(query, uk_lse_5mins_livemarketmacd.class);
+
 		try {
 
 			System.out.println("MACD Calculation started for:" + symbol);
 
-			// List<uk_lse_5mins_livemarketmacd> MarketFeeds_full =
-			// UK_LSE_5Mins_LiveMarketMacdRepository.findAll();
-
-			List<uk_lse_5mins_livemarketmacd> MarketFeeds = new ArrayList<uk_lse_5mins_livemarketmacd>();
-
-			for (int i = 0; i < MarketFeeds_full.size(); i++) {
-
-				if (MarketFeeds_full.get(i).getSymbol().equals(symbol)) {
-					MarketFeedsSizeForSymbol++;
-				}
-
-			}
-
-			for (int i = 0; i < MarketFeedsSizeForSymbol; i++) {
-				// MarketFeeds_full.clear();
-				// MarketFeeds_full = UK_LSE_5Mins_LiveMarketMacdRepository.findAll();
-				MarketFeeds.clear();
-				for (int j = 0; j < MarketFeeds_full.size(); j++) {
-
-					if (MarketFeeds_full.get(j).getSymbol().equals(symbol)) {
-						MarketFeeds.add(MarketFeeds_full.get(j));
-					}
-
-				}
+			for (int i = 0; i < MarketFeeds.size(); i++) {
 
 				Collections.sort(MarketFeeds, new SortbyLatestTime());
 
-				// for (int x = 0; x < MarketFeedsSizeForSymbol; x++) {
-				// System.out.println(MarketFeeds.get(x).getTime());
-				// }
-
-				for (int index = 0; index < MarketFeedsSizeForSymbol; index++) {
+				for (int index = 0; index < MarketFeeds.size(); index++) {
 					if (MarketFeeds.get(index).getEma12().toString().equals("calculating")
 							|| MarketFeeds.get(index).getEma26().toString().equals("calculating")
 							|| MarketFeeds.get(index).getHistogram().toString().equals("calculating")
@@ -141,16 +119,16 @@ public class UK_LSE_5Mins_LiveMarketMacdService {
 
 						// local in-memory MarketFeeds_full updated for this record
 
-						for (int u = 0; u < MarketFeeds_full.size(); u++) {
+						for (int u = 0; u < MarketFeeds.size(); u++) {
 
-							if (MarketFeeds_full.get(u).get_id().equals(MarketFeeds.get(calcStartindex).get_id())) {
-								MarketFeeds_full.get(u).setEma12(ema12);
-								MarketFeeds_full.get(u).setEma26(ema26);
-								MarketFeeds_full.get(u).setSignal(signal);
-								MarketFeeds_full.get(u).setMacd(macd);
-								MarketFeeds_full.get(u).setHistogram(histogram);
+							if (MarketFeeds.get(u).get_id().equals(MarketFeeds.get(calcStartindex).get_id())) {
+								MarketFeeds.get(u).setEma12(ema12);
+								MarketFeeds.get(u).setEma26(ema26);
+								MarketFeeds.get(u).setSignal(signal);
+								MarketFeeds.get(u).setMacd(macd);
+								MarketFeeds.get(u).setHistogram(histogram);
 
-								MarketFeeds.add(MarketFeeds_full.get(u));
+								MarketFeeds.add(MarketFeeds.get(u));
 							}
 
 						}
@@ -166,7 +144,7 @@ public class UK_LSE_5Mins_LiveMarketMacdService {
 
 			}
 
-			List<uk_lse_5mins_livemarketmacd> MarketFeedsForMacdJson = MarketFeeds_full.stream()
+			List<uk_lse_5mins_livemarketmacd> MarketFeedsForMacdJson = MarketFeeds.stream()
 					.filter(a -> a.getSymbol().equals(symbol)).collect(Collectors.toList());
 
 			Collections.sort(MarketFeedsForMacdJson, new SortbyLatestTime());
@@ -177,11 +155,11 @@ public class UK_LSE_5Mins_LiveMarketMacdService {
 
 			int iteratorSize = 400;
 
-			if (MarketFeedsSizeForSymbol < 400) {
-				iteratorSize = MarketFeedsSizeForSymbol;
+			if (MarketFeeds.size() < 400) {
+				iteratorSize = MarketFeeds.size();
 			}
 
-			for (int index = MarketFeedsSizeForSymbol - 1; index > MarketFeedsSizeForSymbol - iteratorSize; index--) {
+			for (int index = MarketFeeds.size() - 1; index > MarketFeeds.size() - iteratorSize; index--) {
 
 				// LOGIC
 				JSONObject obj_inner = new JSONObject();
@@ -245,10 +223,7 @@ public class UK_LSE_5Mins_LiveMarketMacdService {
 			uk_lse_5mins_livemarketmacdjson jsonsaveresult = UK_LSE_5Mins_LiveMarketMacdjsonRepository
 					.save(uk_lse_5mins_macdjson);
 			// uk_lse_5mins_macdjson_<symbol> --> macdDataforSaving
-		//	mongoClient.close();
 
-			MarketFeeds_full.clear();
-			MarketFeeds_full = null;
 			MarketFeeds.clear();
 			MarketFeeds = null;
 			MarketFeedsForMacdJson.clear();
