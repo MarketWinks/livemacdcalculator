@@ -10,6 +10,9 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -42,12 +45,18 @@ public class UK_LSE_Hourly_LiveMarketMacdService {
 		boolean execution_result = false;
 		int calcStartindex = 0;
 		int MarketFeedsSizeForSymbol = 0;
-
-		List<uk_lse_hourly_livemarketmacd> MarketFeeds_full = UK_LSE_Hourly_LiveMarketMacdRepository.findAll();
+//
+//		List<uk_lse_hourly_livemarketmacd> MarketFeeds_full = UK_LSE_Hourly_LiveMarketMacdRepository.findAll();
 
 		MongoClient mongoClient = MongoClients.create(
 				"mongodb+srv://marketwinks:L9sS6oOAk1sHL0yi@aws-eu-west1-cluster-tszuq.mongodb.net/marketwinksdbprod?retryWrites=true");
 
+		MongoTemplate mongoTemplate = new MongoTemplate(mongoClient, "marketwinksdbprod");
+		Query query = new Query();
+		query.addCriteria(Criteria.where("symbol").is(symbol));
+		List<uk_lse_hourly_livemarketmacd> MarketFeeds_full = mongoTemplate.find(query, uk_lse_hourly_livemarketmacd.class);
+
+		
 		try {
 
 			System.out.println("MACD Calculation started for:" + symbol);
